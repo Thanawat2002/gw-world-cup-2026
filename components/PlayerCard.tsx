@@ -87,16 +87,6 @@ export default function PlayerCard({ player, isCrowned, onEliminate, onRestore }
         <div className="card-player">{player.name}</div>
         {round && <div className="card-round">ตก: {round.label}</div>}
 
-        {!player.out && (
-          <button className="btn-elim" onClick={() => onEliminate(player.id)}>
-            TERMINATE
-          </button>
-        )}
-        {player.out && (
-          <button className="btn-restore" onClick={() => onRestore(player.id)}>
-            ↩ ยกเลิก
-          </button>
-        )}
       </div>
     </div>
   );

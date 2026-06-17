@@ -66,6 +66,19 @@ body {
   from { transform: translateX(-50%) translateY(80px); }
   to   { transform: translateX(-50%) translateY(0); }
 }
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  display: inline-block;
+  flex-shrink: 0;
+  animation: live-blink 1.2s ease-in-out infinite;
+}
 
 /* ── BACKGROUNDS ── */
 .bg-grid {

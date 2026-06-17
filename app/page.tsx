@@ -1,26 +1,38 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PlayerCard from '@/components/PlayerCard';
 import EliminateModal from '@/components/EliminateModal';
 import DebtPanel from '@/components/DebtPanel';
 import LogPanel from '@/components/LogPanel';
+import StandingsPanel from '@/components/StandingsPanel';
 import { useGameState } from '@/hooks/useGameState';
 import type { Player } from '@/lib/types';
 import { getRound } from '@/lib/data';
 
 export default function Home() {
-  const { state, hydrated, eliminate, restore, reset, dead, alive, crownedId, deepestEliminated } = useGameState();
+  const { state, hydrated, eliminate, restore, reset, dead, alive, crownedId, deepestEliminated, syncing, lastSyncAt, syncFromAPI } = useGameState();
   const [modalPlayer, setModalPlayer] = useState<Player | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastKey, setToastKey] = useState(0);
+  const prevDeadCount = useRef(0);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
     setToastKey(k => k + 1);
-    const t = setTimeout(() => setToastMsg(null), 3500);
+    const t = setTimeout(() => setToastMsg(null), 4000);
     return () => clearTimeout(t);
   }, []);
+
+  // Show toast when API auto-eliminates teams
+  useEffect(() => {
+    const newlyDead = dead.filter(p => p.order !== null && p.order > prevDeadCount.current);
+    if (prevDeadCount.current > 0 && newlyDead.length > 0) {
+      const names = newlyDead.map(p => `${p.team}`).join(', ');
+      showToast(`AUTO SYNC: ${names} ถูก TERMINATE แล้ว!`);
+    }
+    prevDeadCount.current = dead.length;
+  }, [dead.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleEliminate = (id: number, roundId: string) => {
     eliminate(id, roundId);
@@ -82,6 +94,17 @@ export default function Home() {
           <div className="chip"><span className="dot dot-green" />{alive.length}&nbsp;ทีมยังรอด</div>
           <div className="chip"><span className="dot dot-red" />{dead.length}&nbsp;ทีมตกแล้ว</div>
           <div className="chip"><span className="dot dot-gold" />{Math.min(dead.length, 5)}/5&nbsp;หนี้เหล้า</div>
+          <button
+            onClick={async () => { await syncFromAPI(); showToast('Sync เสร็จแล้ว'); }}
+            disabled={syncing}
+            style={{ background: 'none', border: '1px solid var(--border)', color: syncing ? 'var(--text-dim)' : 'var(--gold)', padding: '5px 14px', borderRadius: 20, fontSize: 11, cursor: syncing ? 'default' : 'pointer', letterSpacing: 1, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            <span style={{ display: 'inline-block', animation: syncing ? 'crown-float 1s linear infinite' : 'none', fontSize: 12 }}>⟳</span>
+            {syncing ? 'SYNCING...' : 'SYNC'}
+            {lastSyncAt && !syncing && (
+              <span style={{ opacity: 0.5, fontSize: 9 }}>{new Date(lastSyncAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}</span>
+            )}
+          </button>
         </div>
 
         {/* Debt alert */}
@@ -133,8 +156,13 @@ export default function Home() {
           ))}
         </div>
 
+        {/* Standings */}
+        <div style={{ maxWidth: 1300, margin: '36px auto 0', padding: '0 16px' }}>
+          <StandingsPanel />
+        </div>
+
         {/* Bottom panels */}
-        <div style={{ maxWidth: 1300, margin: '36px auto 0', padding: '0 16px', display: 'grid', gridTemplateColumns: '1fr', gap: 20 }} className="bottom-grid-responsive">
+        <div style={{ maxWidth: 1300, margin: '24px auto 0', padding: '0 16px', display: 'grid', gridTemplateColumns: '1fr', gap: 20 }} className="bottom-grid-responsive">
           <DebtPanel players={state.players} crownedId={crownedId} />
           <LogPanel dead={dead} />
         </div>
