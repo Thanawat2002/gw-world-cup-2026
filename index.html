@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GW World Cup 2026 — TERMINATOR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080810;
+      --surface: #0F0F1E;
+      --card-bg: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.18);
+      --text: #F1F5F9;
+      --text-muted: #64748B;
+      --text-dim: #2A3347;
+      --gold: #F59E0B;
+      --gold-glow: rgba(245,158,11,0.25);
+      --red: #EF4444;
+      --red-glow: rgba(239,68,68,0.25);
+      --green: #22C55E;
+      --purple: #818CF8;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Source Sans 3', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND ── */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 15% 15%, rgba(245,158,11,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 85% 85%, rgba(99,102,241,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 60% at 50% 50%, rgba(239,68,68,0.03) 0%, transparent 60%);
+    }
+
+    /* ── LAYOUT ── */
+    .z { position: relative; z-index: 1; }
+
+    /* ── HEADER ── */
+    header {
+      padding: 48px 20px 20px;
+      text-align: center;
+      position: relative; z-index: 1;
+    }
+    .eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 5px;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 10px; opacity: 0.8;
+    }
+    .title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(44px, 11vw, 104px);
+      line-height: 0.88; letter-spacing: 3px; color: var(--text);
+    }
+    .title em {
+      font-style: normal; color: var(--gold);
+      text-shadow: 0 0 40px var(--gold-glow), 0 0 80px rgba(245,158,11,0.12);
+    }
+    .subtitle {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(14px, 3.5vw, 24px);
+      letter-spacing: 8px; color: var(--red); margin-top: 6px;
+      text-shadow: 0 0 20px var(--red-glow);
+      animation: pulse-red 3s ease-in-out infinite;
+    }
+    @keyframes pulse-red {
+      0%,100% { opacity: 0.8; } 50% { opacity: 1; }
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+      margin: 20px auto 0; padding: 0 20px;
+      position: relative; z-index: 1;
+    }
+    .chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 14px; border-radius: 100px;
+      border: 1px solid var(--border); background: var(--card-bg);
+      font-size: 13px; font-weight: 600; white-space: nowrap;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .dot-gold  { background: var(--gold);  box-shadow: 0 0 6px var(--gold); }
+
+    /* ── ALERT BANNER ── */
+    .alert {
+      max-width: 720px; margin: 20px auto 0; padding: 14px 18px;
+      border-radius: 12px; display: none; align-items: flex-start; gap: 12px;
+      position: relative; z-index: 1;
+    }
+    .alert.show { display: flex; }
+    .alert-debt {
+      border: 1px solid rgba(245,158,11,0.35);
+      background: rgba(245,158,11,0.07);
+    }
+    .alert-win {
+      border: 1px solid rgba(245,158,11,0.5);
+      background: rgba(245,158,11,0.1);
+      text-align: center; justify-content: center; flex-direction: column;
+      animation: win-glow 2.5s ease-in-out infinite;
+    }
+    @keyframes win-glow {
+      0%,100% { box-shadow: 0 0 20px var(--gold-glow); }
+      50%      { box-shadow: 0 0 50px var(--gold-glow), 0 0 100px rgba(245,158,11,0.1); }
+    }
+    .alert-icon { flex-shrink: 0; margin-top: 2px; }
+    .alert-body { font-size: 14px; line-height: 1.6; }
+    .alert-body strong { color: var(--gold); }
+    .alert-win-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 4px; color: var(--gold); margin-bottom: 4px;
+    }
+
+    /* ── PLAYERS GRID ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px; padding: 24px 16px 0;
+      max-width: 1300px; margin: 0 auto;
+      position: relative; z-index: 1;
+    }
+    @media (min-width: 560px)  { .grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+    @media (min-width: 860px)  { .grid { grid-template-columns: repeat(4, 1fr); gap: 18px; } }
+    @media (min-width: 1100px) { .grid { gap: 20px; } }
+
+    /* ── CARD ── */
+    .card {
+      position: relative; border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s;
+    }
+    .card:not(.is-out):hover {
+      transform: translateY(-3px);
+      border-color: var(--border-hover);
+    }
+    .card.is-crown {
+      border-color: rgba(245,158,11,0.6);
+      box-shadow: 0 0 24px var(--gold-glow), 0 0 60px rgba(245,158,11,0.08);
+    }
+    .card.is-out { opacity: 0.68; }
+
+    /* Flag */
+    .card-flag-wrap {
+      position: relative; width: 100%; padding-top: 58%; overflow: hidden;
+    }
+    .card-flag {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; transition: filter 0.5s;
+    }
+    .card.is-out .card-flag { filter: grayscale(0.85) brightness(0.55); }
+    .card-flag-shade {
+      position: absolute; inset: 0;
+      background: linear-gradient(0deg, rgba(8,8,16,0.92) 0%, rgba(8,8,16,0.2) 55%, transparent 100%);
+    }
+
+    /* Crown */
+    .crown-icon {
+      position: absolute; top: 8px; right: 8px;
+      width: 28px; height: 28px; display: none;
+    }
+    .crown-icon svg {
+      width: 100%; height: 100%;
+      filter: drop-shadow(0 0 8px #F59E0B) drop-shadow(0 0 16px rgba(245,158,11,0.5));
+      animation: crown-float 2s ease-in-out infinite;
+    }
+    .card.is-crown .crown-icon { display: block; }
+    @keyframes crown-float {
+      0%,100% { transform: translateY(0) rotate(-6deg); }
+      50%      { transform: translateY(-7px) rotate(6deg); }
+    }
+
+    /* Overlay states */
+    .card-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.4s; pointer-events: none;
+    }
+    .card.is-out .card-overlay { opacity: 1; }
+
+    .card.is-out:not(.is-champ) .card-overlay { background: rgba(239,68,68,0.1); }
+    .card.is-champ .card-overlay { background: rgba(245,158,11,0.1); }
+
+    .stamp {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(14px, 4vw, 22px);
+      letter-spacing: 3px; padding: 4px 10px;
+      border-radius: 4px; transform: rotate(-14deg);
+    }
+    .card.is-out:not(.is-champ) .stamp {
+      color: var(--red); border: 2.5px solid var(--red);
+      text-shadow: 0 0 12px var(--red-glow);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+    .card.is-champ .stamp {
+      color: var(--gold); border: 2.5px solid var(--gold);
+      text-shadow: 0 0 12px var(--gold-glow);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    /* Fire */
+    .card-fire {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 0; pointer-events: none;
+      background: linear-gradient(0deg, rgba(239,68,68,0.55) 0%, rgba(251,146,60,0.25) 55%, transparent 100%);
+      transition: height 0.5s;
+    }
+    .card.is-out:not(.is-champ) .card-fire {
+      height: 55px;
+      animation: fire-flicker 1.8s ease-in-out infinite;
+    }
+    .card.is-champ .card-fire {
+      height: 55px;
+      background: linear-gradient(0deg, rgba(245,158,11,0.55) 0%, rgba(251,200,60,0.2) 55%, transparent 100%);
+      animation: fire-flicker 1.8s ease-in-out infinite;
+    }
+    @keyframes fire-flicker {
+      0%,100% { opacity: 0.7; height: 55px; }
+      50%      { opacity: 1; height: 72px; }
+    }
+
+    /* Card body */
+    .card-body { padding: 11px 12px 13px; }
+    .badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 7px; }
+    .badge {
+      font-size: 9px; font-weight: 800; letter-spacing: 1px;
+      text-transform: uppercase; padding: 3px 7px; border-radius: 4px;
+    }
+    .b-alive  { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+    .b-out    { background: rgba(239,68,68,0.12); color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+    .b-debt   { background: rgba(239,68,68,0.18); color: var(--red);   border: 1px solid rgba(239,68,68,0.4); }
+    .b-safe   { background: rgba(129,140,248,0.12); color: var(--purple); border: 1px solid rgba(129,140,248,0.25); }
+    .b-gold   { background: rgba(245,158,11,0.14); color: var(--gold);  border: 1px solid rgba(245,158,11,0.3); }
+
+    .card-team {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(19px, 4.5vw, 26px);
+      letter-spacing: 1px; line-height: 1;
+    }
+    .card-player { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+    .card-round  { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+    .btn-elim {
+      display: block; width: 100%; margin-top: 10px;
+      padding: 8px; border-radius: 8px; cursor: pointer;
+      border: 1px solid rgba(239,68,68,0.35);
+      background: rgba(239,68,68,0.06);
+      color: var(--red); font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px; letter-spacing: 2px;
+      transition: all 0.18s;
+    }
+    .btn-elim:hover {
+      background: rgba(239,68,68,0.18); border-color: var(--red);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+    .btn-restore {
+      display: none; width: 100%; margin-top: 8px;
+      padding: 6px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); font-size: 11px;
+      transition: all 0.18s;
+    }
+    .btn-restore:hover { border-color: var(--border-hover); color: var(--text); }
+    .card.is-out .btn-elim    { display: none; }
+    .card.is-out .btn-restore { display: block; }
+
+    /* Shake */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      15%,45%,75% { transform: translateX(-5px); }
+      30%,60%,90% { transform: translateX(5px); }
+    }
+    .shaking { animation: shake 0.45s ease-out; }
+
+    /* ── BOTTOM GRID ── */
+    .bottom {
+      max-width: 1300px; margin: 36px auto 0; padding: 0 16px;
+      display: grid; grid-template-columns: 1fr;
+      gap: 20px; position: relative; z-index: 1;
+    }
+    @media (min-width: 720px) { .bottom { grid-template-columns: 1fr 1fr; } }
+
+    .panel {
+      border-radius: 16px; border: 1px solid var(--border);
+      background: var(--card-bg);
+    }
+    .panel-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-head-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px; letter-spacing: 2px;
+    }
+    .panel-body { padding: 4px 0; }
+
+    /* Debt rows */
+    .debt-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .debt-row:last-child { border-bottom: none; }
+    .debt-num {
+      font-family: 'Bebas Neue', sans-serif; font-size: 22px;
+      min-width: 28px; text-align: center; color: var(--text-muted);
+    }
+    .debt-num.c-debt  { color: var(--red); }
+    .debt-num.c-safe  { color: var(--purple); }
+    .debt-num.c-gold  { color: var(--gold); }
+    .debt-flag { width: 34px; height: 22px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+    .debt-info { flex: 1; }
+    .debt-name { font-weight: 700; font-size: 14px; }
+    .debt-team { font-size: 11px; color: var(--text-muted); }
+    .debt-badge {
+      font-size: 10px; font-weight: 800; letter-spacing: 1px;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+      white-space: nowrap;
+    }
+    .db-debt  { background: rgba(239,68,68,0.14); color: var(--red); }
+    .db-safe  { background: rgba(129,140,248,0.12); color: var(--purple); }
+    .db-gold  { background: rgba(245,158,11,0.14); color: var(--gold); }
+    .db-alive { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+
+    /* Log */
+    .log-body {
+      max-height: 380px; overflow-y: auto;
+      padding: 4px 0;
+    }
+    .log-empty {
+      text-align: center; color: var(--text-muted);
+      padding: 48px 20px; font-size: 14px;
+    }
+    .log-row {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      animation: slide-in 0.3s ease-out;
+    }
+    .log-row:last-child { border-bottom: none; }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateX(-12px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .log-n { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--red); min-width: 26px; }
+    .log-n.gold { color: var(--gold); }
+    .log-flag { width: 26px; height: 18px; object-fit: cover; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
+    .log-info { flex: 1; }
+    .log-team   { font-weight: 700; font-size: 13px; }
+    .log-player { font-size: 11px; color: var(--text-muted); }
+    .log-round  { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+    .log-time   { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+    /* ── MODAL ── */
+    .modal-bg {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(5px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 460px;
+      background: #111120; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 28px;
+      animation: modal-pop 0.28s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes modal-pop {
+      from { opacity: 0; transform: scale(0.82) translateY(24px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-title {
+      font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px;
+    }
+    .modal-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; margin-bottom: 18px; }
+    .modal-rounds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .round-opt {
+      padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--card-bg); color: var(--text); cursor: pointer;
+      text-align: left; transition: all 0.15s;
+    }
+    .round-opt:hover { border-color: var(--red); background: rgba(239,68,68,0.07); }
+    .round-opt.is-champ-opt:hover { border-color: var(--gold); background: rgba(245,158,11,0.07); }
+    .round-opt-label { font-weight: 700; font-size: 13px; }
+    .round-opt-sub   { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .modal-cancel {
+      display: block; width: 100%; padding: 10px;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: transparent; color: var(--text-muted);
+      font-size: 14px; cursor: pointer; transition: all 0.15s;
+    }
+    .modal-cancel:hover { border-color: var(--border-hover); color: var(--text); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1A1A2E; border: 1px solid var(--border);
+      border-radius: 12px; padding: 11px 20px;
+      font-size: 13px; font-weight: 600; z-index: 200;
+      transition: transform 0.32s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap; max-width: calc(100vw - 40px);
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 56px 20px 32px;
+      color: var(--text-dim); font-size: 12px;
+      position: relative; z-index: 1;
+    }
+    .btn-reset {
+      margin-top: 12px; background: none;
+      border: 1px solid var(--border); color: var(--text-muted);
+      padding: 6px 18px; border-radius: 8px; font-size: 12px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="eyebrow">FIFA World Cup 2026 — Gentlewoman Edition</div>
+  <h1 class="title">GW World Cup <em>2026</em></h1>
+  <div class="subtitle">TERMINATOR</div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar z" id="statsBar">
+  <div class="chip"><span class="dot dot-green"></span><span id="aliveCount">8</span>&nbsp;ทีมยังรอด</div>
+  <div class="chip"><span class="dot dot-red"></span><span id="deadCount">0</span>&nbsp;ทีมตกแล้ว</div>
+  <div class="chip"><span class="dot dot-gold"></span><span id="debtCount">0</span>/5&nbsp;หนี้เหล้า</div>
+</div>
+
+<!-- DEBT ALERT -->
+<div class="alert alert-debt z" id="alertDebt">
+  <div class="alert-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  </div>
+  <div class="alert-body" id="alertDebtText"></div>
+</div>
+
+<!-- WINNER BANNER -->
+<div class="alert alert-win z" id="alertWin">
+  <div class="alert-win-title">GAME OVER — FINAL VERDICT!</div>
+  <div class="alert-body" id="alertWinText"></div>
+</div>
+
+<!-- PLAYERS GRID -->
+<div class="grid z" id="grid"></div>
+
+<!-- BOTTOM PANELS -->
+<div class="bottom">
+  <!-- Debt Table -->
+  <div class="panel">
+    <div class="panel-head">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+      </svg>
+      <span class="panel-head-title">ตารางหนี้เหล้า</span>
+    </div>
+    <div class="panel-body" id="debtPanel"></div>
+  </div>
+
+  <!-- Elimination Log -->
+  <div class="panel">
+    <div class="panel-head">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span class="panel-head-title">บันทึกการ Terminate</span>
+    </div>
+    <div class="log-body" id="logPanel"><div class="log-empty">ยังไม่มีทีมตกรอบ</div></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>GW World Cup 2026 Terminator &nbsp;·&nbsp; Gentlewoman Internal</div>
+  <button class="btn-reset" onclick="confirmReset()">Reset ทั้งหมด</button>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">TERMINATE</div>
+    <div class="modal-sub" id="modalSub">เลือกรอบที่ทีมตกรอบ</div>
+    <div class="modal-rounds" id="modalRounds"></div>
+    <button class="modal-cancel" onclick="closeModal()">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── DATA ──
+  const PLAYERS = [
+    { id:1, name:'Nut',     team:'Croatia',   flag:'hr',     accent:'#CC2020' },
+    { id:2, name:'Champ',   team:'Argentina', flag:'ar',     accent:'#5B9BD5' },
+    { id:3, name:'Pat',     team:'Spain',     flag:'es',     accent:'#C60B1E' },
+    { id:4, name:'Nun',     team:'Brazil',    flag:'br',     accent:'#009B3A' },
+    { id:5, name:'Fluck',   team:'England',   flag:'gb-eng', accent:'#CF091F' },
+    { id:6, name:'A.J.Nae', team:'Portugal',  flag:'pt',     accent:'#006400' },
+    { id:7, name:'Name',    team:'France',    flag:'fr',     accent:'#003189' },
+    { id:8, name:'Kim',     team:'Germany',   flag:'de',     accent:'#2A2A2A' },
+  ];
+
+  const ROUNDS = [
+    { id:'group', label:'รอบแบ่งกลุ่ม', sub:'Group Stage',       depth:0 },
+    { id:'r32',   label:'รอบ 32 ทีม',   sub:'Round of 32',       depth:1 },
+    { id:'r16',   label:'รอบ 16 ทีม',   sub:'Round of 16',       depth:2 },
+    { id:'qf',    label:'รอบ 8 ทีม',    sub:'Quarter-Finals',    depth:3 },
+    { id:'sf',    label:'รอบ 4 ทีม',    sub:'Semi-Finals',       depth:4 },
+    { id:'3rd',   label:'อันดับ 3',      sub:'3rd Place',         depth:5 },
+    { id:'ru',    label:'รองแชมป์',      sub:'Runner-Up (Final)', depth:6 },
+    { id:'champ', label:'แชมป์โลก',     sub:'World Champion!',   depth:7 },
+  ];
+
+  // ── STATE ──
+  const INIT = { players: PLAYERS.map(p => ({ ...p, out:false, order:null, round:null, ts:null })), counter:0 };
+  let S = load();
+  let pending = null;
+
+  function load() {
+    try { const s = localStorage.getItem('gw-wc26'); if (s) return JSON.parse(s); } catch(e) {}
+    return JSON.parse(JSON.stringify(INIT));
+  }
+  function save() { localStorage.setItem('gw-wc26', JSON.stringify(S)); }
+
+  // ── DERIVED ──
+  function deadPlayers()  { return S.players.filter(p => p.out); }
+  function alivePlayers() { return S.players.filter(p => !p.out); }
+
+  function roundDepth(id) { return ROUNDS.find(r => r.id === id)?.depth ?? -1; }
+
+  function deepestEliminated() {
+    const dead = deadPlayers();
+    if (!dead.length) return null;
+    return dead.reduce((best, p) => roundDepth(p.round) > roundDepth(best.round) ? p : best);
+  }
+
+  function crownedId() {
+    const alive = alivePlayers();
+    if (alive.length === 1) return alive[0].id;
+    if (alive.length === 0) {
+      const d = deepestEliminated();
+      return d ? d.id : null;
+    }
+    // multiple alive: crown the deepest eliminated (current leader, can be overtaken)
+    const d = deepestEliminated();
+    return d ? d.id : null;
+  }
+
+  // ── RENDER ──
+  function render() {
+    renderGrid();
+    renderDebt();
+    renderLog();
+    renderStats();
+    renderAlerts();
+  }
+
+  function flagSrc(code) { return `https://flagcdn.com/w160/${code}.png`; }
+
+  function renderGrid() {
+    const crowned = crownedId();
+    document.getElementById('grid').innerHTML = S.players.map(p => {
+      const isOut   = p.out;
+      const isChamp = p.round === 'champ';
+      const round   = ROUNDS.find(r => r.id === p.round);
+      const isCrown = p.id === crowned;
+      const isDebt  = isOut && p.order <= 5;
+      const isSafe  = isOut && p.order > 5;
+
+      const cardClass = [
+        'card',
+        isOut ? 'is-out' : '',
+        isChamp ? 'is-champ' : '',
+        isCrown ? 'is-crown' : '',
+      ].filter(Boolean).join(' ');
+
+      const stampText = isChamp ? 'CHAMPION' : 'TERMINATED';
+
+      let badgeHTML = '';
+      if (!isOut) {
+        badgeHTML = `<span class="badge b-alive">ยังรอด</span>`;
+      } else {
+        badgeHTML = `<span class="badge b-out">#${p.order} ตก</span>`;
+        if (isChamp) badgeHTML += `<span class="badge b-gold">แชมป์โลก</span>`;
+        else if (isDebt) badgeHTML += `<span class="badge b-debt">เลี้ยงเหล้า</span>`;
+        else if (isSafe) badgeHTML += `<span class="badge b-safe">รอด</span>`;
+      }
+
+      return `
+        <div class="${cardClass}" id="card-${p.id}">
+          <div class="card-flag-wrap">
+            <img class="card-flag" src="${flagSrc(p.flag)}" alt="${p.team}" loading="lazy" onerror="this.style.background='${p.accent}'">
+            <div class="card-flag-shade"></div>
+          </div>
+
+          <div class="crown-icon">
+            <svg viewBox="0 0 24 24" fill="#F59E0B" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 20h20v2H2v-2zm2-2L2 6l6 4 4-8 4 8 6-4-2 12H4z"/>
+            </svg>
+          </div>
+
+          <div class="card-overlay">
+            <div class="stamp">${stampText}</div>
+          </div>
+
+          <div class="card-fire"></div>
+
+          <div class="card-body">
+            <div class="badges">${badgeHTML}</div>
+            <div class="card-team">${p.team}</div>
+            <div class="card-player">${p.name}</div>
+            ${round ? `<div class="card-round">ตก: ${round.label}</div>` : ''}
+            ${!isOut
+              ? `<button class="btn-elim" onclick="openModal(${p.id})">TERMINATE</button>`
+              : `<button class="btn-restore" onclick="restore(${p.id})">↩ ยกเลิก</button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderStats() {
+    const dead = deadPlayers().length;
+    document.getElementById('aliveCount').textContent = alivePlayers().length;
+    document.getElementById('deadCount').textContent  = dead;
+    document.getElementById('debtCount').textContent  = Math.min(dead, 5);
+  }
+
+  function renderAlerts() {
+    const dead = deadPlayers();
+    const crowned = crownedId();
+    const crownPlayer = S.players.find(p => p.id === crowned);
+    const debtors = S.players.filter(p => p.out && p.order <= 5);
+
+    const alertDebt = document.getElementById('alertDebt');
+    const alertWin  = document.getElementById('alertWin');
+
+    if (dead.length >= 5 && crownPlayer) {
+      alertDebt.classList.add('show');
+      const names = debtors.map(p => `<strong>${p.name}</strong>`).join(', ');
+      const receiver = crownPlayer;
+      document.getElementById('alertDebtText').innerHTML =
+        `${names} ต้องเลี้ยงเหล้า <strong>${receiver.name} (${receiver.team})</strong> ผู้เข้ารอบลึกสุดในขณะนี้`;
+    } else {
+      alertDebt.classList.remove('show');
+    }
+
+    if (alivePlayers().length === 0 && crownPlayer) {
+      alertWin.classList.add('show');
+      const r = ROUNDS.find(r => r.id === crownPlayer.round);
+      const debtNames = debtors.map(p => p.name).join(', ');
+      document.getElementById('alertWinText').innerHTML =
+        `<strong>${crownPlayer.name}</strong> ชนะด้วยทีม <strong>${crownPlayer.team}</strong>${r ? ` (${r.label})` : ''}<br>
+         ${debtors.length > 0 ? `${debtNames} ต้องเลี้ยงเหล้า!` : ''}`;
+    } else {
+      alertWin.classList.remove('show');
+    }
+  }
+
+  function renderDebt() {
+    const crowned = crownedId();
+    const sorted = [...S.players].sort((a,b) => {
+      if (a.out && b.out) return a.order - b.order;
+      if (a.out) return -1;
+      if (b.out) return 1;
+      return 0;
+    });
+
+    document.getElementById('debtPanel').innerHTML = sorted.map(p => {
+      const isCrown = p.id === crowned;
+      const isDebt  = p.out && p.order <= 5;
+      const isSafe  = p.out && p.order > 5;
+      const round   = ROUNDS.find(r => r.id === p.round);
+
+      let numClass = '', badgeClass = 'db-alive', badgeText = 'ยังรอด';
+      if (isCrown && p.out) { numClass = 'c-gold'; badgeClass = 'db-gold'; badgeText = 'รับเหล้า'; }
+      else if (isDebt)      { numClass = 'c-debt'; badgeClass = 'db-debt'; badgeText = 'เลี้ยงเหล้า'; }
+      else if (isSafe)      { numClass = 'c-safe'; badgeClass = 'db-safe'; badgeText = 'รอด'; }
+
+      return `
+        <div class="debt-row">
+          <div class="debt-num ${numClass}">${p.out ? p.order : '—'}</div>
+          <img class="debt-flag" src="${flagSrc(p.flag)}" alt="${p.team}" onerror="this.style.background='${p.accent}'">
+          <div class="debt-info">
+            <div class="debt-name">${p.name}</div>
+            <div class="debt-team">${p.team}${round ? ` · ${round.label}` : ''}</div>
+          </div>
+          <div class="debt-badge ${badgeClass}">${badgeText}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderLog() {
+    const dead = deadPlayers().sort((a,b) => a.order - b.order);
+    const el = document.getElementById('logPanel');
+    if (!dead.length) {
+      el.innerHTML = '<div class="log-empty">ยังไม่มีทีมตกรอบ</div>';
+      return;
+    }
+    el.innerHTML = dead.map(p => {
+      const round = ROUNDS.find(r => r.id === p.round);
+      const isChamp = p.round === 'champ';
+      const dt = p.ts ? new Date(p.ts) : null;
+      const timeStr = dt
+        ? `${dt.getDate()}/${dt.getMonth()+1} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
+        : '';
+      return `
+        <div class="log-row">
+          <div class="log-n ${isChamp ? 'gold' : ''}">${p.order}</div>
+          <img class="log-flag" src="${flagSrc(p.flag)}" alt="${p.team}" onerror="this.style.background='${p.accent}'">
+          <div class="log-info">
+            <div class="log-team">${p.team} <span style="color:var(--text-muted);font-weight:400">(${p.name})</span></div>
+            <div class="log-player">${round?.label ?? ''}</div>
+            <div class="log-round">${round?.sub ?? ''}</div>
+          </div>
+          <div class="log-time">${timeStr}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── MODAL ──
+  function openModal(id) {
+    pending = id;
+    const p = S.players.find(p => p.id === id);
+    document.getElementById('modalTitle').textContent = `TERMINATE ${p.team.toUpperCase()}`;
+    document.getElementById('modalSub').textContent   = `${p.name} — เลือกรอบที่ ${p.team} ตกรอบ`;
+    document.getElementById('modalRounds').innerHTML  = ROUNDS.map(r => `
+      <button class="round-opt ${r.id==='champ'?'is-champ-opt':''}" onclick="confirm_('${r.id}')">
+        <div class="round-opt-label">${r.label}</div>
+        <div class="round-opt-sub">${r.sub}</div>
+      </button>`).join('');
+    document.getElementById('modalBg').classList.add('open');
+  }
+  function closeModal() {
+    document.getElementById('modalBg').classList.remove('open');
+    pending = null;
+  }
+  function confirm_(roundId) {
+    if (!pending) return;
+    closeModal();
+    eliminate(pending, roundId);
+  }
+
+  // ── ACTIONS ──
+  function eliminate(id, roundId) {
+    const p = S.players.find(p => p.id === id);
+    if (!p || p.out) return;
+    S.counter++;
+    p.out   = true;
+    p.order = S.counter;
+    p.round = roundId;
+    p.ts    = new Date().toISOString();
+    save();
+    render();
+
+    const card = document.getElementById(`card-${id}`);
+    if (card) {
+      card.classList.add('shaking');
+      setTimeout(() => card.classList.remove('shaking'), 450);
+    }
+
+    const round = ROUNDS.find(r => r.id === roundId);
+    const isChamp = roundId === 'champ';
+    const suffix = isChamp
+      ? ` — ${p.name} แชมป์โลก!`
+      : S.counter <= 5
+        ? ` — ${p.name} ต้องเลี้ยงเหล้า!`
+        : ` — ${p.name} รอดแล้ว!`;
+    toast(`${p.team} ${isChamp ? 'CHAMPION' : 'TERMINATED'} (${round?.label})${suffix}`);
+  }
+
+  function restore(id) {
+    const p = S.players.find(p => p.id === id);
+    if (!p || !p.out) return;
+    p.out = false; p.order = null; p.round = null; p.ts = null;
+    const rest = S.players.filter(q => q.out).sort((a,b) => a.order - b.order);
+    rest.forEach((q, i) => { q.order = i + 1; });
+    S.counter = rest.length;
+    save(); render();
+    toast(`${p.team} กลับมาแล้ว`);
+  }
+
+  function confirmReset() {
+    if (!confirm('รีเซ็ตทั้งหมดใช่ไหม?')) return;
+    S = JSON.parse(JSON.stringify(INIT));
+    save(); render();
+    toast('รีเซ็ตเรียบร้อย');
+  }
+
+  // ── TOAST ──
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+
+  // Init
+  render();
+</script>
+</body>
+</html>
