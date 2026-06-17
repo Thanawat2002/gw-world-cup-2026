@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gw-world-cup",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "--port", "3334"],
+      "port": 3334
+    }
+  ]
+}
