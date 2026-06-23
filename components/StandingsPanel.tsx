@@ -63,24 +63,14 @@ function GroupStage({ standings }: { standings: Record<string, StandingEntry[]> 
 
 // ── Match list ─────────────────────────────────────────────────────────────
 
-const BKK = 'Asia/Bangkok';
-
-function parseDate(local_date: string): Date {
-  // local_date is UTC: "06/11/2026 13:00"
-  const [datePart, timePart] = local_date.split(' ');
-  const [mm, dd, yyyy] = datePart.split('/');
-  const [hh, min] = timePart.split(':');
-  return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00Z`);
-}
-
 function MatchList({ matches }: { matches: WCGame[] }) {
   if (!matches.length) return <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40, fontSize: 13 }}>ยังไม่มีข้อมูลแมตช์</div>;
 
-  const sorted = [...matches].sort((a, b) => parseDate(a.local_date).getTime() - parseDate(b.local_date).getTime());
+  const sorted = [...matches].sort((a, b) => (a.utc_ms ?? 0) - (b.utc_ms ?? 0));
 
   const byDate = new Map<string, WCGame[]>();
   for (const m of sorted) {
-    const d = parseDate(m.local_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: BKK });
+    const d = m.bkk_date ?? m.local_date;
     if (!byDate.has(d)) byDate.set(d, []);
     byDate.get(d)!.push(m);
   }
@@ -99,7 +89,7 @@ function MatchList({ matches }: { matches: WCGame[] }) {
               const live     = !finished && m.time_elapsed !== 'notstarted' && m.time_elapsed;
               const homeName = m.home_team_name_en || m.home_team_label || '?';
               const awayName = m.away_team_name_en || m.away_team_label || '?';
-              const timeStr  = parseDate(m.local_date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: BKK });
+              const timeStr  = m.bkk_time ?? m.local_date.split(' ')[1];
 
               return (
                 <div key={m.id} style={{ background: ours ? 'rgba(245,158,11,0.07)' : 'var(--surface)', border: `1px solid ${ours ? 'rgba(245,158,11,0.25)' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -142,6 +132,7 @@ export default function StandingsPanel() {
   const [activeStage, setActiveStage] = useState('GROUP_STAGE');
   const [standings, setStandings]   = useState<Record<string, StandingEntry[]>>({});
   const [matches, setMatches]       = useState<WCGame[]>([]);
+  const [liveMatches, setLiveMatches] = useState<WCGame[]>([]);
   const [hasLive, setHasLive]       = useState(false);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -154,8 +145,9 @@ export default function StandingsPanel() {
       const ms: WCGame[] = mRes.matches ?? [];
       setMatches(ms);
 
-      const live = ms.some(m => m.finished !== 'TRUE' && m.time_elapsed && m.time_elapsed !== 'notstarted');
-      setHasLive(live);
+      const live = ms.filter(m => m.finished !== 'TRUE' && m.time_elapsed && m.time_elapsed !== 'notstarted');
+      setLiveMatches(live);
+      setHasLive(live.length > 0);
 
       if (stage === 'GROUP_STAGE') {
         const sRes = await fetch('/api/standings').then(r => r.json());
@@ -182,8 +174,12 @@ export default function StandingsPanel() {
   return (
     <div className="panel" style={{ marginTop: 0 }}>
       <style>{`
-        @keyframes live-blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        .live-dot { width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;animation:live-blink 1.2s ease-in-out infinite; }
+        @keyframes live-blink  { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes live-pulse  { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0)} }
+        .live-dot-green { width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;animation:live-blink 2s ease-in-out infinite; }
+        .live-dot-red   { width:7px;height:7px;border-radius:50%;background:#EF4444;display:inline-block;flex-shrink:0;animation:live-blink 0.7s ease-in-out infinite; }
+        .live-badge     { display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid rgba(239,68,68,0.5);background:rgba(239,68,68,0.1);animation:live-pulse 2s ease-in-out infinite;cursor:default; }
+        .standings-badge{ display:flex;align-items:center;gap:5px;cursor:default; }
       `}</style>
 
       {/* Header */}
@@ -192,10 +188,23 @@ export default function StandingsPanel() {
           <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
         </svg>
         <span className="panel-head-title">FIFA World Cup 2026</span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: hasLive ? '#22c55e' : 'var(--text-dim)', letterSpacing: 1 }}>
-          <span className="live-dot" />
-          {hasLive ? 'LIVE NOW' : 'LIVE STANDINGS'}
-        </span>
+
+        <div style={{ marginLeft: 'auto' }}>
+          {hasLive ? (
+            <div className="live-badge">
+              <span className="live-dot-red" />
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#EF4444' }}>LIVE</span>
+              {liveMatches.length > 1 && (
+                <span style={{ fontSize: 10, color: 'rgba(239,68,68,0.7)', fontWeight: 600 }}>{liveMatches.length}</span>
+              )}
+            </div>
+          ) : (
+            <div className="standings-badge">
+              <span className="live-dot-green" />
+              <span style={{ fontSize: 10, letterSpacing: 1.5, color: 'var(--text-muted)', fontWeight: 600 }}>STANDINGS</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

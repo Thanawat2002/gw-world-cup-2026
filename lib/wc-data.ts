@@ -22,6 +22,10 @@ export interface WCGame {
   away_team_label?: string;
   home_flag?: string;
   away_flag?: string;
+  bkk_date?: string;
+  bkk_time?: string;
+  utc_ms?: number;
+  stadium_id?: string;
 }
 
 export interface WCTeam {
