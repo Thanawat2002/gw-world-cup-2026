@@ -9,7 +9,7 @@
   --border-hover: rgba(255, 255, 255, 0.18);
   --text: #F1F5F9;
   --text-muted: #64748B;
-  --text-dim: #2A3347;
+  --text-dim: #3D4F6B;
   --gold: #F59E0B;
   --gold-glow: rgba(245, 158, 11, 0.25);
   --red: #EF4444;
@@ -65,6 +65,10 @@ body {
 @keyframes toast-in {
   from { transform: translateX(-50%) translateY(80px); }
   to   { transform: translateX(-50%) translateY(0); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 @keyframes live-blink {
   0%, 100% { opacity: 1; }

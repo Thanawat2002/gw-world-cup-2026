@@ -1,113 +1,84 @@
 import { NextResponse } from 'next/server';
+import { getGames } from '@/lib/wc-data';
 
-const BASE = 'https://api.football-data.org/v4';
-const COMP = 'WC';
+const OUR_TEAMS = ['Croatia','Argentina','Spain','Brazil','England','Portugal','France','Germany'];
 
-// Map API stage → our round id
-const STAGE_ROUND: Record<string, string> = {
-  LAST_32: 'r32',
-  LAST_16: 'r16',
-  QUARTER_FINALS: 'qf',
-  SEMI_FINALS: 'sf',     // loses sf AND loses 3rd place match
-  THIRD_PLACE: '3rd',   // wins 3rd place match
-  FINAL: 'champ',       // special: winner = champ, loser = ru
-};
-
-// Our teams — ordered from most-specific to least-specific to avoid false matches
-const OUR_TEAMS = ['Croatia', 'Argentina', 'Spain', 'Brazil', 'England', 'Portugal', 'France', 'Germany'];
-
-function matchesTeam(apiName: string, ourTeam: string): boolean {
-  const a = apiName.toLowerCase();
-  const b = ourTeam.toLowerCase();
+function matchTeam(apiName: string, our: string) {
+  const a = apiName.toLowerCase(), b = our.toLowerCase();
   return a === b || a.includes(b) || b.includes(a);
 }
+
+// worldcup26.ir type → our round id
+const TYPE_ROUND: Record<string, string> = {
+  r32: 'r32', r16: 'r16', qf: 'qf', sf: 'sf', third: '3rd', final: 'champ',
+};
 
 let cache: { data: unknown; ts: number } | null = null;
 const TTL = 2 * 60 * 1000;
 
 export async function GET() {
-  const key = process.env.FOOTBALL_DATA_API_KEY;
-  if (!key) return NextResponse.json({ error: 'No API key' }, { status: 500 });
-
   if (cache && Date.now() - cache.ts < TTL) return NextResponse.json(cache.data);
 
-  // Fetch all matches in one call
-  const res = await fetch(`${BASE}/competitions/${COMP}/matches`, {
-    headers: { 'X-Auth-Token': key },
-  });
-  if (!res.ok) return NextResponse.json({ error: `API error ${res.status}` }, { status: res.status });
+  try {
+    const games = await getGames();
+    const finished = games.filter(g => g.finished === 'TRUE');
 
-  const { matches = [] } = await res.json();
+    const result: Record<string, { eliminatedAt: string; date: string } | null> = {};
+    for (const t of OUR_TEAMS) result[t] = null;
 
-  // Result map: team → { eliminatedAt, date }
-  const result: Record<string, { eliminatedAt: string; date: string } | null> = {};
-  for (const t of OUR_TEAMS) result[t] = null;
-
-  // 1. FINAL — determine champ vs runner-up
-  const finalMatch = matches.find((m: Match) => m.stage === 'FINAL' && m.status === 'FINISHED');
-  if (finalMatch) {
-    const winner = finalMatch.score.winner === 'HOME_TEAM' ? finalMatch.homeTeam.name : finalMatch.awayTeam.name;
-    const loser  = finalMatch.score.winner === 'HOME_TEAM' ? finalMatch.awayTeam.name : finalMatch.homeTeam.name;
-    for (const t of OUR_TEAMS) {
-      if (matchesTeam(winner, t)) result[t] = { eliminatedAt: 'champ', date: finalMatch.utcDate };
-      if (matchesTeam(loser,  t)) result[t] = { eliminatedAt: 'ru',    date: finalMatch.utcDate };
-    }
-  }
-
-  // 2. Knockout stages (most recent first — later stages override earlier ones if somehow duped)
-  const knockoutOrder = ['THIRD_PLACE', 'SEMI_FINALS', 'QUARTER_FINALS', 'LAST_16', 'LAST_32'];
-  for (const stage of knockoutOrder) {
-    const finished = matches.filter((m: Match) => m.stage === stage && m.status === 'FINISHED');
-    for (const m of finished) {
-      if (!m.score.winner) continue;
-      const loser = m.score.winner === 'HOME_TEAM' ? m.awayTeam.name : m.homeTeam.name;
-      const winner = m.score.winner === 'HOME_TEAM' ? m.homeTeam.name : m.awayTeam.name;
+    // FINAL — winner = champ, loser = ru
+    const final = finished.find(g => g.type === 'final' && g.home_team_name_en && g.away_team_name_en);
+    if (final) {
+      const hs = parseInt(final.home_score), as = parseInt(final.away_score);
+      const winner = hs > as ? final.home_team_name_en : final.away_team_name_en;
+      const loser  = hs > as ? final.away_team_name_en : final.home_team_name_en;
       for (const t of OUR_TEAMS) {
-        if (result[t] !== null) continue; // already determined
-        if (stage === 'THIRD_PLACE') {
-          if (matchesTeam(winner, t)) result[t] = { eliminatedAt: '3rd', date: m.utcDate };
-          if (matchesTeam(loser,  t)) result[t] = { eliminatedAt: 'sf',  date: m.utcDate };
-        } else {
-          if (matchesTeam(loser, t)) result[t] = { eliminatedAt: STAGE_ROUND[stage], date: m.utcDate };
+        if (matchTeam(winner, t)) result[t] = { eliminatedAt: 'champ', date: final.local_date };
+        if (matchTeam(loser,  t)) result[t] = { eliminatedAt: 'ru',    date: final.local_date };
+      }
+    }
+
+    // 3rd place — winner = 3rd, loser = sf
+    const third = finished.find(g => g.type === 'third');
+    if (third) {
+      const hs = parseInt(third.home_score), as = parseInt(third.away_score);
+      const winner = hs > as ? third.home_team_name_en : third.away_team_name_en;
+      const loser  = hs > as ? third.away_team_name_en : third.home_team_name_en;
+      for (const t of OUR_TEAMS) {
+        if (result[t]) continue;
+        if (matchTeam(winner, t)) result[t] = { eliminatedAt: '3rd', date: third.local_date };
+        if (matchTeam(loser,  t)) result[t] = { eliminatedAt: 'sf',  date: third.local_date };
+      }
+    }
+
+    // Knockout stages
+    for (const type of ['sf', 'qf', 'r16', 'r32']) {
+      for (const m of finished.filter(g => g.type === type && g.home_team_name_en)) {
+        const hs = parseInt(m.home_score), as = parseInt(m.away_score);
+        const loser = hs > as ? m.away_team_name_en : m.home_team_name_en;
+        for (const t of OUR_TEAMS) {
+          if (!result[t] && matchTeam(loser, t)) result[t] = { eliminatedAt: TYPE_ROUND[type], date: m.local_date };
         }
       }
     }
-  }
 
-  // 3. Group stage — teams that played 3 group matches but aren't in LAST_32
-  const r32Matches = matches.filter((m: Match) => m.stage === 'LAST_32');
-  if (r32Matches.length > 0) {
-    const teamsInR32 = new Set<string>(
-      r32Matches.flatMap((m: Match) => [m.homeTeam.name, m.awayTeam.name].filter(Boolean))
-    );
-    const groupFinished = matches.filter((m: Match) => m.stage === 'GROUP_STAGE' && m.status === 'FINISHED');
-
-    for (const t of OUR_TEAMS) {
-      if (result[t] !== null) continue;
-      const inR32 = [...teamsInR32].some(name => matchesTeam(name, t));
-      if (inR32) continue;
-
-      // Check they actually played (≥ 3 finished group matches)
-      const played = groupFinished.filter((m: Match) =>
-        matchesTeam(m.homeTeam.name, t) || matchesTeam(m.awayTeam.name, t)
-      );
-      if (played.length >= 3) {
-        const lastMatch = played.sort((a: Match, b: Match) => b.utcDate.localeCompare(a.utcDate))[0];
-        result[t] = { eliminatedAt: 'group', date: lastMatch.utcDate };
+    // Group stage — team played 3 games but not in R32 draw
+    const r32games = games.filter(g => g.type === 'r32');
+    if (r32games.length > 0) {
+      const inR32 = new Set(r32games.flatMap(g => [g.home_team_name_en, g.away_team_name_en].filter(Boolean)));
+      const groupDone = finished.filter(g => g.type === 'group');
+      for (const t of OUR_TEAMS) {
+        if (result[t]) continue;
+        if ([...inR32].some(n => matchTeam(n, t))) continue;
+        const played = groupDone.filter(g => matchTeam(g.home_team_name_en, t) || matchTeam(g.away_team_name_en, t));
+        if (played.length >= 3) result[t] = { eliminatedAt: 'group', date: played[played.length - 1].local_date };
       }
     }
+
+    const data = { result, updatedAt: new Date().toISOString() };
+    cache = { data, ts: Date.now() };
+    return NextResponse.json(data);
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error' }, { status: 500 });
   }
-
-  const data = { result, updatedAt: new Date().toISOString() };
-  cache = { data, ts: Date.now() };
-  return NextResponse.json(data);
-}
-
-interface Match {
-  stage: string;
-  status: string;
-  utcDate: string;
-  score: { winner: string | null; fullTime: { home: number | null; away: number | null } };
-  homeTeam: { name: string };
-  awayTeam: { name: string };
 }

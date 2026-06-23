@@ -177,11 +177,11 @@ export default function Home() {
             style={{
               background: "none",
               border: "1px solid var(--border)",
-              color: syncing ? "var(--text-dim)" : "var(--gold)",
+              color: syncing ? "var(--text-muted)" : "var(--gold)",
               padding: "5px 14px",
               borderRadius: 20,
               fontSize: 11,
-              cursor: syncing ? "default" : "pointer",
+              cursor: syncing ? "not-allowed" : "pointer",
               letterSpacing: 1,
               transition: "all 0.2s",
               display: "flex",
@@ -189,15 +189,13 @@ export default function Home() {
               gap: 5,
             }}
           >
-            <span
-              style={{
-                display: "inline-block",
-                animation: syncing ? "crown-float 1s linear infinite" : "none",
-                fontSize: 12,
-              }}
+            <svg
+              width="13" height="13" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+              style={{ flexShrink: 0, animation: syncing ? "spin 0.8s linear infinite" : "none" }}
             >
-              ⟳
-            </span>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
             {syncing ? "SYNCING..." : "SYNC"}
             {lastSyncAt && !syncing && (
               <span style={{ opacity: 0.5, fontSize: 9 }}>

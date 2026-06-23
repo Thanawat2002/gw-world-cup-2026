@@ -1,33 +1,31 @@
 import { NextResponse } from 'next/server';
+import { getGames, getTeams } from '@/lib/wc-data';
 
-const BASE = 'https://api.football-data.org/v4';
-const COMP = 'WC';
-
-const cacheMap = new Map<string, { data: unknown; ts: number }>();
-const TTL = 5 * 60 * 1000;
+const STAGE_TYPE: Record<string, string[]> = {
+  GROUP_STAGE:    ['group'],
+  LAST_32:        ['r32'],
+  LAST_16:        ['r16'],
+  QUARTER_FINALS: ['qf'],
+  SEMI_FINALS:    ['sf'],
+  FINAL:          ['final', 'third'],
+};
 
 export async function GET(req: Request) {
-  const key = process.env.FOOTBALL_DATA_API_KEY;
-  if (!key) return NextResponse.json({ error: 'No API key' }, { status: 500 });
-
   const { searchParams } = new URL(req.url);
   const stage = searchParams.get('stage') ?? 'GROUP_STAGE';
+  const types = STAGE_TYPE[stage] ?? ['group'];
 
-  const cached = cacheMap.get(stage);
-  if (cached && Date.now() - cached.ts < TTL) {
-    return NextResponse.json(cached.data);
+  try {
+    const [games, teams] = await Promise.all([getGames(), getTeams()]);
+    const matches = games
+      .filter(g => types.includes(g.type))
+      .map(g => ({
+        ...g,
+        home_flag: teams.get(g.home_team_name_en)?.flag ?? '',
+        away_flag: teams.get(g.away_team_name_en)?.flag ?? '',
+      }));
+    return NextResponse.json({ matches });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error' }, { status: 500 });
   }
-
-  const res = await fetch(`${BASE}/competitions/${COMP}/matches?stage=${stage}`, {
-    headers: { 'X-Auth-Token': key },
-    next: { revalidate: 300 },
-  });
-
-  if (!res.ok) {
-    return NextResponse.json({ error: `API error ${res.status}` }, { status: res.status });
-  }
-
-  const data = await res.json();
-  cacheMap.set(stage, { data, ts: Date.now() });
-  return NextResponse.json(data);
 }
