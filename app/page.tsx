@@ -2,21 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import PlayerCard from "@/components/PlayerCard"
-import EliminateModal from "@/components/EliminateModal"
 import DebtPanel from "@/components/DebtPanel"
 import LogPanel from "@/components/LogPanel"
 import StandingsPanel from "@/components/StandingsPanel"
 import { useGameState } from "@/hooks/useGameState"
-import type { Player } from "@/lib/types"
 import { getRound } from "@/lib/data"
 
 export default function Home() {
   const {
     state,
     hydrated,
-    eliminate,
-    restore,
-    reset,
     dead,
     alive,
     crownedId,
@@ -25,7 +20,6 @@ export default function Home() {
     lastSyncAt,
     syncFromAPI,
   } = useGameState()
-  const [modalPlayer, setModalPlayer] = useState<Player | null>(null)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const [toastKey, setToastKey] = useState(0)
   const prevDeadCount = useRef(0)
@@ -48,37 +42,6 @@ export default function Home() {
     }
     prevDeadCount.current = dead.length
   }, [dead.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleEliminate = (id: number, roundId: string) => {
-    eliminate(id, roundId)
-    setModalPlayer(null)
-    const p = state.players.find((p) => p.id === id)
-    const round = getRound(roundId)
-    const order = state.counter + 1
-    if (p) {
-      const isChamp = roundId === "champ"
-      const suffix = isChamp
-        ? `${p.name} แชมป์โลก!`
-        : order <= 5
-          ? `${p.name} ต้องเลี้ยงเหล้า!`
-          : `${p.name} รอดแล้ว!`
-      showToast(
-        `${p.team} ${isChamp ? "CHAMPION" : "TERMINATED"} (${round?.label}) — ${suffix}`,
-      )
-    }
-  }
-
-  const handleRestore = (id: number) => {
-    const p = state.players.find((p) => p.id === id)
-    restore(id)
-    if (p) showToast(`${p.team} กลับมาแล้ว`)
-  }
-
-  const handleReset = () => {
-    if (!confirm("รีเซ็ตทั้งหมดใช่ไหม?")) return
-    reset()
-    showToast("รีเซ็ตเรียบร้อย")
-  }
 
   // Debt alert
   const debtors = state.players.filter((p) => p.out && (p.order ?? 0) <= 5)
@@ -273,15 +236,7 @@ export default function Home() {
           className="players-grid-responsive"
         >
           {state.players.map((p) => (
-            <PlayerCard
-              key={p.id}
-              player={p}
-              isCrowned={p.id === crownedId}
-              onEliminate={(id) =>
-                setModalPlayer(state.players.find((pl) => pl.id === id) ?? null)
-              }
-              onRestore={handleRestore}
-            />
+            <PlayerCard key={p.id} player={p} isCrowned={p.id === crownedId} />
           ))}
         </div>
 
@@ -318,25 +273,8 @@ export default function Home() {
           }}
         >
           <div>GW World Cup 2026 Terminator · Gentlewoman Internal</div>
-          {/* <button
-            onClick={handleReset}
-            style={{ marginTop: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '6px 18px', borderRadius: 8, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
-            onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = 'var(--red)'; (e.target as HTMLElement).style.color = 'var(--red)'; }}
-            onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = 'var(--border)'; (e.target as HTMLElement).style.color = 'var(--text-muted)'; }}
-          >
-            Reset ทั้งหมด
-          </button> */}
         </footer>
       </div>
-
-      {/* Modal */}
-      {modalPlayer && (
-        <EliminateModal
-          player={modalPlayer}
-          onConfirm={(roundId) => handleEliminate(modalPlayer.id, roundId)}
-          onClose={() => setModalPlayer(null)}
-        />
-      )}
 
       {/* Toast */}
       {toastMsg && (

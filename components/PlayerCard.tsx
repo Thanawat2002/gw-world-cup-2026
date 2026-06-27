@@ -8,11 +8,9 @@ import { getRound } from '@/lib/data';
 interface Props {
   player: Player;
   isCrowned: boolean;
-  onEliminate: (id: number) => void;
-  onRestore: (id: number) => void;
 }
 
-export default function PlayerCard({ player, isCrowned, onEliminate, onRestore }: Props) {
+export default function PlayerCard({ player, isCrowned }: Props) {
   const [shaking, setShaking] = useState(false);
   const round = getRound(player.round);
   const isChamp = player.round === 'champ';

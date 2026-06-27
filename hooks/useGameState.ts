@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameState } from '@/lib/types';
 import { initialState, roundDepth, PLAYERS_BASE } from '@/lib/data';
 
-const KEY = 'gw-wc26';
 const SYNC_INTERVAL = 3 * 60 * 1000; // re-fetch every 3 min
 
 export function useGameState() {
@@ -14,47 +13,12 @@ export function useGameState() {
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const syncTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KEY);
-      if (saved) setState(JSON.parse(saved));
-    } catch {}
-    setHydrated(true);
-  }, []);
+  useEffect(() => { setHydrated(true); }, []);
 
-  const persist = useCallback((next: GameState) => {
-    setState(next);
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-  }, []);
-
-  const eliminate = useCallback((id: number, roundId: string, ts?: string) => {
-    setState(prev => {
-      const players = prev.players.map(p => {
-        if (p.id !== id || p.out) return p;
-        return { ...p, out: true, order: prev.counter + 1, round: roundId, ts: ts ?? new Date().toISOString() };
-      });
-      const next = { players, counter: prev.counter + 1 };
-      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, []);
-
-  const restore = useCallback((id: number) => {
-    setState(prev => {
-      const players = prev.players.map(p => p.id === id ? { ...p, out: false, order: null, round: null, ts: null } : p);
-      const remaining = players.filter(p => p.out).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      remaining.forEach((p, i) => { p.order = i + 1; });
-      const next = { players, counter: remaining.length };
-      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, []);
-
-  const reset = useCallback(() => {
-    persist(initialState());
-  }, [persist]);
-
-  // Auto-sync: fetches /api/sync and eliminates teams whose results are confirmed
+  // Auto-sync: fetches /api/sync and rebuilds the whole elimination state from
+  // scratch on every call. State is fully derived from the live API — nothing
+  // is persisted — so corrections (a result that gets revised, a team that
+  // shouldn't have been marked out) always propagate.
   const syncFromAPI = useCallback(async (): Promise<string[]> => {
     setSyncing(true);
     const eliminated: string[] = [];
@@ -66,33 +30,25 @@ export function useGameState() {
         updatedAt: string;
       };
 
-      setState(prev => {
-        let next = { ...prev, players: [...prev.players] };
-        let counter = prev.counter;
+      // Confirmed eliminations, ordered chronologically so #1 = first out.
+      const ms = (d: string) => { const t = new Date(d).getTime(); return Number.isNaN(t) ? 0 : t; };
+      const confirmed = Object.entries(result)
+        .filter((e): e is [string, { eliminatedAt: string; date: string }] => Boolean(e[1]))
+        .sort((a, b) => ms(a[1].date) - ms(b[1].date));
 
-        for (const [teamName, info] of Object.entries(result)) {
-          if (!info) continue;
-          // Find the player for this team
-          const base = PLAYERS_BASE.find(p => p.team === teamName);
-          if (!base) continue;
-          const player = next.players.find(p => p.id === base.id);
-          if (!player || player.out) continue; // already eliminated manually
+      const next = initialState(); // everyone alive
+      for (const [teamName, info] of confirmed) {
+        const base = PLAYERS_BASE.find(p => p.team === teamName);
+        if (!base) continue;
+        const idx = next.players.findIndex(p => p.id === base.id);
+        if (idx === -1) continue;
+        const order = eliminated.length + 1;
+        next.players[idx] = { ...next.players[idx], out: true, order, round: info.eliminatedAt, ts: info.date };
+        eliminated.push(teamName);
+      }
+      next.counter = eliminated.length;
 
-          // Auto-eliminate
-          counter += 1;
-          next.players = next.players.map(p =>
-            p.id === base.id
-              ? { ...p, out: true, order: counter, round: info.eliminatedAt, ts: info.date }
-              : p
-          );
-          next.counter = counter;
-          eliminated.push(teamName);
-        }
-
-        try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-        return next;
-      });
-
+      setState(next);
       setLastSyncAt(updatedAt);
     } catch {}
     setSyncing(false);
@@ -121,5 +77,5 @@ export function useGameState() {
     return deepestEliminated?.id ?? null;
   })();
 
-  return { state, hydrated, eliminate, restore, reset, dead, alive, deepestEliminated, crownedId, syncing, lastSyncAt, syncFromAPI };
+  return { state, hydrated, dead, alive, deepestEliminated, crownedId, syncing, lastSyncAt, syncFromAPI };
 }
